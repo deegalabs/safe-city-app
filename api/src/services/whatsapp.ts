@@ -13,9 +13,14 @@
  */
 
 import { hashFingerprint } from '../lib/fingerprint'
+import { redis } from '../lib/redis'
 import { botService } from './bot'
 import { transcribeAudio } from './ai'
 import type { BotOutput } from '../types'
+
+/** Listas/botões foram descontinuados pelo WhatsApp (mai/2024). Usamos só texto e opções numeradas. */
+const WA_OPTS_TTL = 60
+const WA_OPTS_PREFIX = 'wa:opts:'
 
 const EVOLUTION_URL    = process.env['EVOLUTION_API_URL']    ?? 'http://localhost:8080'
 const EVOLUTION_KEY    = process.env['EVOLUTION_API_KEY']    ?? ''
@@ -101,8 +106,21 @@ export async function handleIncoming(payload: EvolutionWebhookPayload): Promise<
 
   if (!text && !optionKey) return
 
-  // Hash phone number — never store plain
   const sessionId = hashFingerprint(jid)
+  // Resolver "1", "2" etc. para optionKey quando temos opções guardadas (menu em texto)
+  const optsKey = WA_OPTS_PREFIX + sessionId
+  const storedOpts = await redis.get(optsKey)
+  if (storedOpts && text && /^\s*\d+\s*$/.test(text)) {
+    try {
+      const keys = JSON.parse(storedOpts) as string[]
+      const n = Math.floor(Number(text))
+      if (n >= 1 && n <= keys.length) {
+        optionKey = keys[n - 1]
+        text = undefined
+        await redis.del(optsKey)
+      }
+    } catch { /* ignore */ }
+  }
 
   const output = await botService.process({
     channel: 'whatsapp',
@@ -116,22 +134,17 @@ export async function handleIncoming(payload: EvolutionWebhookPayload): Promise<
 }
 
 // ── Outgoing ──────────────────────────────────────────────────
+// Listas/botões nativos foram descontinuados pelo WhatsApp; usamos só sendText com menu numerado.
 
 async function sendOutput(jid: string, output: BotOutput): Promise<void> {
-  if (output.options && output.options.length > 0 && output.options.length <= 3) {
-    // Use WhatsApp button message (max 3 buttons)
-    await sendButtons(jid, output.text, output.options.map((o) => ({
-      buttonId: o.key,
-      buttonText: { displayText: o.label },
-      type: 1,
-    })))
-  } else if (output.options && output.options.length > 3) {
-    // Use list message for many options
-    await sendList(jid, output.text, output.options)
-  } else {
-    // Plain text
-    await sendText(jid, formatText(output))
+  let text = formatText(output)
+  const options = output.options
+  if (options && options.length > 0) {
+    text += '\n\n' + options.map((o, i) => `${i + 1}. ${o.label}`).join('\n') + '\n\n_Digite o número da opção (ex: 1)_'
+    const sessionId = hashFingerprint(jid)
+    await redis.setex(WA_OPTS_PREFIX + sessionId, WA_OPTS_TTL, JSON.stringify(options.map((o) => o.key)))
   }
+  await sendText(jid, text)
 }
 
 async function sendText(jid: string, text: string): Promise<void> {
@@ -139,32 +152,6 @@ async function sendText(jid: string, text: string): Promise<void> {
     number: jid,
     options: { delay: 300, presence: 'composing' },
     textMessage: { text },
-  })
-}
-
-async function sendButtons(jid: string, text: string, buttons: unknown[]): Promise<void> {
-  await evolutionFetch('/message/sendButtons/' + EVOLUTION_INST, {
-    number: jid,
-    options: { delay: 300, presence: 'composing' },
-    title: 'Safe City',
-    description: text,
-    footer: 'Centro · Floripa',
-    buttons,
-  })
-}
-
-async function sendList(jid: string, text: string, options: BotOutput['options']): Promise<void> {
-  await evolutionFetch('/message/sendList/' + EVOLUTION_INST, {
-    number: jid,
-    options: { delay: 300, presence: 'composing' },
-    title: 'Safe City',
-    description: text,
-    footerText: 'Centro · Floripa',
-    buttonText: 'Ver opções',
-    sections: [{
-      title: 'Escolha uma opção',
-      rows: (options ?? []).map((o) => ({ title: o.label, rowId: o.key })),
-    }],
   })
 }
 
