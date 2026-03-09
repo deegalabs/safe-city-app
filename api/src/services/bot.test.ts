@@ -228,6 +228,105 @@ describe('BotService', () => {
     })
   })
 
+  describe('from_review fix — alterar retrato volta para revisar', () => {
+    it('selecting option at retrato_genero with from_review in session goes to retrato_revisar', async () => {
+      mockGetSession.mockResolvedValue({
+        channel: 'pwa',
+        sessionId: '0123456789ab',
+        step: 'retrato_genero',
+        dados: { retrato: { genero: 'homem' }, from_review: true } as never,
+        updatedAt: Date.now(),
+      })
+      const out = await botService.process({
+        channel: 'pwa',
+        sessionId: '0123456789ab',
+        optionKey: 'goto:retrato_idade',
+        optionData: { 'retrato.genero': 'mulher' },
+      })
+      const saved = mockSetSession.mock.calls[0]?.[1]
+      expect(saved?.step).toBe('retrato_revisar')
+      expect(out.text).toContain('Confira o retrato')
+    })
+
+    it('typing text at retrato_detalhe with from_review returns to retrato_revisar', async () => {
+      mockGetSession.mockResolvedValue({
+        channel: 'pwa',
+        sessionId: '0123456789ab',
+        step: 'retrato_detalhe',
+        dados: { retrato: { genero: 'homem', idade: '30-50', cor_pele: 'parda' }, from_review: true } as never,
+        updatedAt: Date.now(),
+      })
+      const out = await botService.process({
+        channel: 'pwa',
+        sessionId: '0123456789ab',
+        text: 'Camiseta vermelha e calça jeans',
+      })
+      const saved = mockSetSession.mock.calls[0]?.[1]
+      expect(saved?.step).toBe('retrato_revisar')
+      expect(out.text).toContain('Confira o retrato')
+    })
+  })
+
+  describe('grupo mini-flow', () => {
+    it('selecting grupo goes to retrato_grupo_qtd, not retrato_idade', async () => {
+      mockGetSession.mockResolvedValue({
+        channel: 'pwa',
+        sessionId: '0123456789ab',
+        step: 'retrato_genero',
+        dados: { retrato: {} },
+        updatedAt: Date.now(),
+      })
+      const out = await botService.process({
+        channel: 'pwa',
+        sessionId: '0123456789ab',
+        optionKey: 'goto:retrato_grupo_qtd',
+        optionData: { 'retrato.genero': 'grupo' },
+      })
+      expect(out.text).toContain('Quantas pessoas')
+    })
+  })
+
+  describe('infra skip retrato', () => {
+    it('tipo infra skips retrato_inicio and goes to report_infra_desc', async () => {
+      mockGetSession.mockResolvedValue({
+        channel: 'pwa',
+        sessionId: '0123456789ab',
+        step: 'report_urgencia',
+        dados: { tipo: 'infra', local: 'Centro', zone_id: 'centro', retrato: {} },
+        updatedAt: Date.now(),
+      })
+      const out = await botService.process({
+        channel: 'pwa',
+        sessionId: '0123456789ab',
+        optionKey: 'goto:retrato_inicio',
+        optionData: { urgencia: 'baixa' },
+      })
+      expect(out.text).toContain('infraestrutura')
+      const saved = mockSetSession.mock.calls[0]?.[1]
+      expect(saved?.step).toBe('report_infra_desc')
+    })
+  })
+
+  describe('SOS pending reset', () => {
+    it('any non-sos_submit action while sos_pending resets session to start', async () => {
+      mockGetSession.mockResolvedValue({
+        channel: 'pwa',
+        sessionId: '0123456789ab',
+        step: 'sos_pending',
+        dados: { tipo: 'violencia', urgencia: 'alta', retrato: {} },
+        updatedAt: Date.now(),
+      })
+      const out = await botService.process({
+        channel: 'pwa',
+        sessionId: '0123456789ab',
+        optionKey: 'goto:start',
+      })
+      const saved = mockSetSession.mock.calls[0]?.[1]
+      expect(saved?.step).toBe('start')
+      expect(out.text).toContain('Safe City')
+    })
+  })
+
   describe('moderation DUPLICATE (3.11)', () => {
     it('when moderation blocks (DUPLICATE) returns recently-reported message', async () => {
       mockGetSession.mockResolvedValue({

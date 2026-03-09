@@ -28,7 +28,7 @@ function buildFlow(): Record<string, FlowStep> {
       options: [
         { label: '⚠️ Reportar algo agora',       key: 'goto:report_tipo'  },
         { label: '🗺 Ver alertas da região',      key: 'nav:alertas'       },
-        { label: '📍 Safe spots nearby', key: 'nav:mapa' },
+        { label: '📍 Pontos seguros próximos', key: 'nav:mapa' },
         { label: 'ℹ️ Como funciona',             key: 'goto:como'         },
       ],
     },
@@ -85,10 +85,19 @@ function buildFlow(): Record<string, FlowStep> {
     retrato_genero: {
       text: 'Era...',
       options: [
-        { label: '👨 Homem',            key: 'goto:retrato_idade', data: { 'retrato.genero': 'homem'  } },
-        { label: '👩 Mulher',           key: 'goto:retrato_idade', data: { 'retrato.genero': 'mulher' } },
-        { label: '👥 Grupo (2+)',       key: 'goto:retrato_idade', data: { 'retrato.genero': 'grupo'  } },
-        { label: '❓ Não consegui ver', key: 'goto:retrato_idade', data: { 'retrato.genero': null     } },
+        { label: '👨 Homem',            key: 'goto:retrato_idade',     data: { 'retrato.genero': 'homem'  } },
+        { label: '👩 Mulher',           key: 'goto:retrato_idade',     data: { 'retrato.genero': 'mulher' } },
+        { label: '👥 Grupo (2+)',       key: 'goto:retrato_grupo_qtd', data: { 'retrato.genero': 'grupo'  } },
+        { label: '❓ Não consegui ver', key: 'goto:retrato_idade',     data: { 'retrato.genero': null     } },
+      ],
+    },
+    retrato_grupo_qtd: {
+      text: 'Quantas pessoas aproximadamente?',
+      options: [
+        { label: '👥 2–3 pessoas', key: 'goto:retrato_detalhe', data: { 'retrato.idade': '2-3 pessoas' } },
+        { label: '👥 4–6 pessoas', key: 'goto:retrato_detalhe', data: { 'retrato.idade': '4-6 pessoas' } },
+        { label: '👥 Mais de 6',   key: 'goto:retrato_detalhe', data: { 'retrato.idade': '6+ pessoas'  } },
+        { label: '❓ Não sei',     key: 'goto:retrato_detalhe', data: { 'retrato.idade': null           } },
       ],
     },
     retrato_idade: {
@@ -201,6 +210,14 @@ function buildFlow(): Record<string, FlowStep> {
       nextOnInput: 'retrato_revisar',
       options: [{ label: '✅ Revisar e enviar', key: 'goto:retrato_revisar' }],
     },
+    report_infra_desc: {
+      text: 'Descreva o problema de infraestrutura:\nEx: poste apagado, calçada com buraco, lixo acumulado...',
+      input: true,
+      inputPlaceholder: 'Descreva o problema...',
+      inputKey: 'extra',
+      nextOnInput: 'retrato_revisar',
+      options: [{ label: '✅ Revisar e enviar', key: 'goto:retrato_revisar' }],
+    },
     retrato_revisar: {
       text: '', // built dynamically in stepToOutput
       options: [], // built dynamically
@@ -248,11 +265,19 @@ export class BotService {
       }
     }
 
-    // SOS submit (client sent location after ACTION:gps_sos)
+    // SOS submit or stuck SOS session reset
     const optKeyForSos = input.optionKey ?? ''
-    if (session.step === 'sos_pending' && optKeyForSos === 'ACTION:sos_submit' && input.optionData?.local != null && input.optionData?.zone_id != null) {
-      session = this.mergeData(session, { local: input.optionData.local as string, zone_id: input.optionData.zone_id as string })
-      return await this.sendReport(session, key)
+    if (session.step === 'sos_pending') {
+      if (optKeyForSos === 'ACTION:sos_submit' && input.optionData?.local != null && input.optionData?.zone_id != null) {
+        session = this.mergeData(session, { local: input.optionData.local as string, zone_id: input.optionData.zone_id as string })
+        return await this.sendReport(session, key)
+      }
+      // User abandoned SOS (cancel or any other action) — reset to start
+      session.step = 'start'
+      session.dados = { retrato: {} }
+      session.updatedAt = Date.now()
+      await setSession(key, session)
+      return this.stepToOutput('start', session)
     }
 
     // Handle free text: input step with nextOnInput → merge and advance
@@ -260,7 +285,13 @@ export class BotService {
       const currentFlow = this.flow[session.step]
       if (currentFlow?.inputKey && currentFlow?.nextOnInput) {
         session = this.mergeData(session, { [currentFlow.inputKey]: input.text })
-        session.step = currentFlow.nextOnInput.replace('goto:', '')
+        let nextFromInput = currentFlow.nextOnInput.replace('goto:', '')
+        const fromReviewText = (session.dados as Record<string, unknown>).from_review
+        if (fromReviewText && session.step.startsWith('retrato_') && session.step !== 'retrato_revisar') {
+          nextFromInput = 'retrato_revisar'
+          delete (session.dados as Record<string, unknown>).from_review
+        }
+        session.step = nextFromInput
         session.updatedAt = Date.now()
         await setSession(key, session)
         return this.stepToOutput(session.step, session)
@@ -305,11 +336,16 @@ export class BotService {
       }
     }
 
-    // From "Alterar detalhe": after editing a retrato_* step, return to revisar
+    // When user chose an option FROM a retrato_* step and came from review, return to revisar
     const fromReview = (session.dados as Record<string, unknown>).from_review
-    if (fromReview && nextStep.startsWith('retrato_') && nextStep !== 'retrato_revisar') {
+    if (fromReview && session.step.startsWith('retrato_') && session.step !== 'retrato_revisar') {
       nextStep = 'retrato_revisar'
       delete (session.dados as Record<string, unknown>).from_review
+    }
+
+    // Infra tipo skips retrato steps — go directly to infra description
+    if (nextStep === 'retrato_inicio' && session.dados.tipo === 'infra') {
+      nextStep = 'report_infra_desc'
     }
 
     session.step = nextStep
