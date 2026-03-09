@@ -20,7 +20,7 @@ export default async function whatsappRoutes(app: FastifyInstance) {
    * Configure na Evolution a URL completa com o token (ex.: .../webhook/SEU_TOKEN_LONGO).
    * Gere o token: node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
    */
-  app.post<{ Params: { token: string } }>('/webhook/:token', async (req, reply) => {
+  app.post<{ Params: { token: string } }>('/webhook/:token', { config: { rateLimit: false } }, async (req, reply) => {
     if (!WEBHOOK_PATH_TOKEN || !constantTimeEqual(req.params.token, WEBHOOK_PATH_TOKEN)) {
       return reply.code(404).send(err('NOT_FOUND', 'Not found'))
     }

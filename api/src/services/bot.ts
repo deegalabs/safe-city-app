@@ -316,7 +316,7 @@ export class BotService {
         navigateTo: dest,
         text: dest === 'alertas'
           ? '🗺 Veja os alertas ativos no app.'
-          : '📍 See safe spots on the map.',
+          : '📍 Veja os pontos seguros no mapa.',
       }
     }
 

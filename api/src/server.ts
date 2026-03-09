@@ -30,8 +30,11 @@ async function main() {
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Webhook-Secret'],
   })
   await app.register(rateLimit, {
-    max: 60, timeWindow: '1 minute',
+    max: 60,
+    timeWindow: '1 minute',
     errorResponseBuilder: () => ({ data: null, error: { code: 'RATE_LIMIT', message: 'Muitas requisições.' } }),
+    // Webhook da Evolution não conta: uma ação do usuário gera vários eventos (MESSAGES_UPSERT, etc.)
+    skip: (req) => req.url?.startsWith('/api/whatsapp/webhook/') === true,
   })
 
   await app.register(swagger, { openapi: openApiSpec as object })
