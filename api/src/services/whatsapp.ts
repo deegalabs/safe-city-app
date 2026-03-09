@@ -148,10 +148,11 @@ async function sendOutput(jid: string, output: BotOutput): Promise<void> {
 }
 
 async function sendText(jid: string, text: string): Promise<void> {
+  // Evolution API v2 espera "text" na raiz do body; v1 usava textMessage: { text }
   await evolutionFetch('/message/sendText/' + EVOLUTION_INST, {
     number: jid,
-    options: { delay: 300, presence: 'composing' },
-    textMessage: { text },
+    text,
+    delay: 300,
   })
 }
 
