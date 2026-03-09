@@ -35,6 +35,7 @@ export default function App() {
   const [view, setView] = useState<ViewId>('chat')
   const [sosOpen, setSosOpen] = useState(false)
   const [sosSending, setSosSending] = useState(false)
+  const [sosSent, setSosSent] = useState(false)
   const [sosError, setSosError] = useState<string | null>(null)
   const { alerts } = useAlerts()
   const bot = useBot()
@@ -65,8 +66,12 @@ export default function App() {
         fingerprint,
       })
       if (res.data) {
-        setSosOpen(false)
-        setView('alertas')
+        setSosSent(true)
+        setTimeout(() => {
+          setSosOpen(false)
+          setSosSent(false)
+          setView('alertas')
+        }, 3000)
       } else {
         setSosError(res.error?.message ?? 'Falha ao enviar alerta.')
       }
@@ -75,6 +80,13 @@ export default function App() {
     }
     setSosSending(false)
   }, [])
+
+  const closeSosOverlay = useCallback(() => {
+    if (!sosSending && !sosSent) {
+      setSosOpen(false)
+      setSosError(null)
+    }
+  }, [sosSending, sosSent])
 
   return (
     <div className="app">
@@ -96,25 +108,40 @@ export default function App() {
         {view === 'bairro'  && <Bairro  />}
         {view === 'sobre'   && <Sobre   />}
       </main>
-      <button
-        type="button"
-        className="sos-fab"
-        onClick={() => setSosOpen(true)}
-      >
-        SOS
-      </button>
+      {!sosOpen && (
+        <button type="button" className="sos-fab" onClick={() => setSosOpen(true)}>
+          SOS
+        </button>
+      )}
       {sosOpen && (
-        <div style={{ position: 'fixed', inset: 0, zIndex: 300, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.6)' }} onClick={() => !sosSending && setSosOpen(false)}>
-          <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 16, padding: 24, maxWidth: 320, width: '90%', textAlign: 'center' }} onClick={(e) => e.stopPropagation()}>
-            <div style={{ width: 64, height: 64, borderRadius: '50%', background: '#ef444422', border: '2px solid var(--red)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px', fontSize: 24 }}>SOS</div>
-            <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--bright)', marginBottom: 8 }}>Alerta de emergência</div>
-            <div style={{ fontSize: 12, color: 'var(--dim)', marginBottom: 16, lineHeight: 1.5 }}>Toque para confirmar e disparar alerta. Sua localização será usada.</div>
-            {sosError && <div style={{ fontSize: 12, color: 'var(--red)', marginBottom: 12 }}>{sosError}</div>}
-            <div style={{ display: 'flex', gap: 8 }}>
-              <button type="button" onClick={() => !sosSending && setSosOpen(false)} disabled={sosSending} style={{ flex: 1, padding: 12, borderRadius: 10, border: '1px solid var(--border)', background: 'var(--bg1)', color: 'var(--text)', cursor: sosSending ? 'not-allowed' : 'pointer' }}>Cancelar</button>
-              <button type="button" onClick={onSosConfirm} disabled={sosSending} style={{ flex: 1, padding: 12, borderRadius: 10, border: 'none', background: 'var(--red)', color: '#fff', fontWeight: 700, cursor: sosSending ? 'not-allowed' : 'pointer' }}>{sosSending ? 'Enviando...' : 'Confirmar'}</button>
-            </div>
-          </div>
+        <div className="sos-overlay" onClick={closeSosOverlay}>
+          {sosSent ? (
+            <>
+              <div style={{ fontSize: 48 }}>✅</div>
+              <div className="sos-sent">
+                Alerta de emergência enviado.<br />A comunidade foi notificada.
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="sos-overlay-label">Emergência</div>
+              <button
+                type="button"
+                className="sos-circle"
+                onClick={(e) => { e.stopPropagation(); void onSosConfirm() }}
+                disabled={sosSending}
+              >
+                SOS
+              </button>
+              <div className="sos-label">
+                Toque no círculo para confirmar e disparar o alerta de emergência para a comunidade.
+              </div>
+              {sosError && <div style={{ fontSize: 12, color: 'var(--red)', textAlign: 'center', maxWidth: 260 }}>{sosError}</div>}
+              <button type="button" className="sos-cancel" onClick={(e) => { e.stopPropagation(); closeSosOverlay() }}>
+                Cancelar
+              </button>
+            </>
+          )}
         </div>
       )}
       <nav className="botnav">
