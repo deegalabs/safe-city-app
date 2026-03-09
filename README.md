@@ -37,40 +37,58 @@ safe-city-app/
 
 ## Rodar local
 
-### 1. Subir Redis (obrigatório) e, se quiser, Postgres local
+Cada pasta (`api/`, `web/`) é um projeto independente com seu próprio `package.json`, `pnpm-lock.yaml` e `.env`.
+
+### 1. API — Redis (obrigatório) e, se quiser, Postgres local
 
 ```bash
+cd api
 docker compose up -d
 ```
 
-- **Redis** (porta 6379): sessões do bot na API. Sem ele a API não sobe.
-- **Postgres** (porta 5432): opcional. Use **Supabase** em nuvem (recomendado) ou este Postgres para rodar 100% local. Credenciais do container: `shield` / `shield` / banco `shield`.
+- **Redis** (porta 6379): sessões do bot. Sem ele a API não sobe.
+- **Postgres** (porta 5432): opcional. Use **Supabase** em nuvem (recomendado) ou este Postgres. Credenciais do container: `shield` / `shield` / banco `shield`.
 
-### 2. Dependências e variáveis
+### 2. API — Dependências e variáveis
 
 ```bash
+cd api
 pnpm install
 cp .env.example .env
 ```
 
-No `.env`:
+No `api/.env`: **Mínimo** `REDIS_URL=redis://localhost:6379` e `FINGERPRINT_SALT` (veja `docs/ENV.md`). Para persistência: **Supabase** (`DATABASE_URL`, `DIRECT_URL`, `SUPABASE_*`) ou Postgres local (`DATABASE_URL=postgresql://shield:shield@localhost:5432/shield`).
 
-- **Mínimo para ver o PWA e a API no ar:** já vem `REDIS_URL=redis://localhost:6379` e `FINGERPRINT_SALT` pode ser gerado (veja `docs/ENV.md`). O frontend abre mesmo sem Supabase (alertas vêm da API; Realtime só com Supabase).
-- **Para a API persistir dados:** configure **Supabase** (recomendado) ou use o Postgres do Docker:
-  - Supabase: `DATABASE_URL`, `DIRECT_URL`, `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY` — ver `docs/ENV.md`.
-  - Postgres local: `DATABASE_URL=postgresql://shield:shield@localhost:5432/shield` e `DIRECT_URL` igual.
-
-### 3. Banco (se tiver DATABASE_URL configurado)
+### 3. API — Banco (se tiver DATABASE_URL)
 
 ```bash
+cd api
 pnpm db:migrate
 pnpm db:seed
 ```
 
-### 4. Subir web e API
+### 4. Web — Dependências e variáveis
 
 ```bash
-pnpm dev
+cd web
+pnpm install
+cp .env.example .env
+```
+
+Opcional: preencha `web/.env` com `VITE_API_URL`, `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `VITE_VAPID_PUBLIC_KEY` (ver `web/.env.example`).
+
+### 5. Subir API e Web
+
+Em dois terminais:
+
+```bash
+# Terminal 1 — API
+cd api && pnpm dev
+```
+
+```bash
+# Terminal 2 — Web
+cd web && pnpm dev
 ```
 
 - **PWA:** http://localhost:5173  
@@ -81,7 +99,7 @@ pnpm dev
 
 ## Documentação
 
-**Na raiz:** `ENV.md` (variáveis de ambiente), `BACKLOG.md` (bugs/melhorias/dúvidas).
+**Na raiz do repo (logos-circle):** `ENV.md`, `EVOLUTION_LOCAL.md`, `BACKLOG.md`.
 
 **Pasta `docs/`:** `ARCHITECTURE.md`, `API.md`, `PRIVACY.md`, `BOT_FLOW.md`, `DATABASE.md`.
 
