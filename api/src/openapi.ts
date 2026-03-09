@@ -103,7 +103,16 @@ export const openApiSpec = {
     '/api/subscribe': {
       post: { summary: 'Registra push subscription', tags: ['Subscribe'], requestBody: { content: { 'application/json': { schema: { type: 'object' } } } }, responses: { 200: { description: 'OK' } } },
     },
-    // POST /api/whatsapp/webhook/:token — intencionalmente não documentado (URL secreta)
+    '/api/whatsapp/webhook/{token}': {
+      post: {
+        summary: 'Webhook Evolution API',
+        description: 'Recebe eventos da Evolution. O token no path é o valor de WHATSAPP_WEBHOOK_PATH_TOKEN (não exposto aqui).',
+        tags: ['WhatsApp'],
+        parameters: [{ name: 'token', in: 'path', required: true, description: 'Token secreto (WHATSAPP_WEBHOOK_PATH_TOKEN)' }],
+        requestBody: { content: { 'application/json': { schema: { type: 'object' } } } },
+        responses: { 200: { description: 'OK' }, 404: { description: 'Token inválido' } },
+      },
+    },
     '/api/whatsapp/status': {
       get: { summary: 'Status da instância WhatsApp', tags: ['WhatsApp'], responses: { 200: { description: 'OK' } } },
     },

@@ -13,7 +13,7 @@ Resposta padrão: `{ data: T, error: null }` ou `{ data: null, error: { code, me
 Body: `{ sessionId, text?, optionKey?, optionData? }`
 
 ## WhatsApp
-`POST /api/whatsapp/webhook/:token` — recebe mensagens da Evolution API (URL com token; não exposta no Swagger)  
+`POST /api/whatsapp/webhook/:token` — recebe mensagens da Evolution API (token no path; valor em WHATSAPP_WEBHOOK_PATH_TOKEN)  
 `GET  /api/whatsapp/status`  — verifica se instância está conectada
 
 ## Reports

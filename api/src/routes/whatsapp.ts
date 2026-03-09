@@ -16,7 +16,7 @@ function constantTimeEqual(a: string, b: string): boolean {
 export default async function whatsappRoutes(app: FastifyInstance) {
   /**
    * POST /api/whatsapp/webhook/:token
-   * Webhook da Evolution API. URL não exposta no Swagger.
+   * Webhook da Evolution API. Documentada no Swagger como /webhook/{token}; o valor do token é secreto.
    * Configure na Evolution a URL completa com o token (ex.: .../webhook/SEU_TOKEN_LONGO).
    * Gere o token: node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
    */
