@@ -8,10 +8,13 @@
  *   → WhatsAppService.handleIncoming()
  *   → BotService.process() (same logic as PWA)
  *   → WhatsAppService.send() → Evolution API → WhatsApp
+ *
+ * Audio: messageType === 'audioMessage' → getBase64FromMediaMessage → transcribe → bot.process
  */
 
 import { hashFingerprint } from '../lib/fingerprint'
 import { botService } from './bot'
+import { transcribeAudio } from './ai'
 import type { BotOutput } from '../types'
 
 const EVOLUTION_URL    = process.env['EVOLUTION_API_URL']    ?? 'http://localhost:8080'
@@ -35,6 +38,27 @@ export function verifyWebhookSecret(secret: string): boolean {
   return !WEBHOOK_SECRET || secret === WEBHOOK_SECRET
 }
 
+/** Fetch audio as base64 from Evolution API (message key from webhook). */
+async function getAudioBase64(messageKey: { id: string }): Promise<{ buffer: Buffer; mimeType?: string } | null> {
+  try {
+    const res = await fetch(`${EVOLUTION_URL}/chat/getBase64FromMediaMessage/${EVOLUTION_INST}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', apikey: EVOLUTION_KEY },
+      body: JSON.stringify({ message: { key: messageKey }, convertToMp4: false }),
+    })
+    if (!res.ok) return null
+    const data = (await res.json()) as { base64?: string; mimetype?: string; mimeType?: string }
+    const b64 = data.base64
+    if (!b64 || typeof b64 !== 'string') return null
+    const base64Clean = b64.replace(/^data:[\w/+-]+;base64,/, '')
+    const buffer = Buffer.from(base64Clean, 'base64')
+    const mimeType = data.mimetype ?? data.mimeType ?? 'audio/ogg'
+    return { buffer, mimeType }
+  } catch {
+    return null
+  }
+}
+
 export async function handleIncoming(payload: EvolutionWebhookPayload): Promise<void> {
   if (payload.data.key.fromMe) return
   const VALID_EVENTS = ['messages.upsert', 'MESSAGES_UPSERT', 'messages.update']
@@ -54,6 +78,16 @@ export async function handleIncoming(payload: EvolutionWebhookPayload): Promise<
     const btn = payload.data.message?.buttonsResponseMessage
     optionKey  = btn?.selectedButtonId
     text       = btn?.selectedDisplayText
+  } else if (msgType === 'audioMessage') {
+    const audio = await getAudioBase64(payload.data.key)
+    if (audio) {
+      const transcript = await transcribeAudio(audio.buffer, audio.mimeType)
+      if (transcript.trim()) text = transcript.trim()
+    }
+    if (!text) {
+      await sendText(jid, '❌ Não consegui entender o áudio. Envie em texto ou tente novamente.')
+      return
+    }
   }
 
   if (!text && !optionKey) return

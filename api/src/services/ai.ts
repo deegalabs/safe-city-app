@@ -1,5 +1,7 @@
-import Groq from 'groq-sdk'
+import Groq, { toFile } from 'groq-sdk'
 import type { Retrato } from '../types'
+
+const WHISPER_MODEL = 'whisper-large-v3-turbo'
 
 let _client: Groq | null = null
 function getClient(): Groq | null {
@@ -53,5 +55,28 @@ export async function moderateText(text: string): Promise<boolean> {
     return content.toLowerCase().includes('ok')
   } catch {
     return true
+  }
+}
+
+/**
+ * Transcreve áudio para texto (pt) via Groq Whisper.
+ * Usa a mesma GROQ_API_KEY. Retorna string vazia se sem key ou erro.
+ */
+export async function transcribeAudio(buffer: Buffer, mimeType?: string): Promise<string> {
+  const client = getClient()
+  if (!client || buffer.length === 0) return ''
+  const ext = mimeType === 'audio/mpeg' || mimeType === 'audio/mp3' ? 'mp3' : 'webm'
+  try {
+    const file = await toFile(buffer, `audio.${ext}`, { type: mimeType ?? 'audio/webm' })
+    const out = await client.audio.transcriptions.create({
+      model: WHISPER_MODEL,
+      file,
+      language: 'pt',
+      response_format: 'text',
+    })
+    return (out as { text?: string }).text?.trim() ?? ''
+  } catch (err) {
+    console.error('transcribeAudio error:', err instanceof Error ? err.message : err)
+    return ''
   }
 }

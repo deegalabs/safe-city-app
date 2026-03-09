@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react'
-import { Shield } from 'lucide-react'
+import { Shield, Mic, Square } from 'lucide-react'
 import type { useBot } from '@/hooks/useBot'
 import type { ViewId } from '@/App'
 
@@ -27,7 +27,7 @@ const S = {
 }
 
 export default function Chat({ onViewSwitch, bot }: Props) {
-  const { messages, isTyping, inputActive, pickOption, sendText, handleLocationSearch } = bot
+  const { messages, isTyping, inputActive, isRecording, startRecording, stopRecording, pickOption, sendText, handleLocationSearch } = bot
   const bottomRef = useRef<HTMLDivElement>(null)
   const inputRef  = useRef<HTMLInputElement>(null)
 
@@ -110,7 +110,7 @@ export default function Chat({ onViewSwitch, bot }: Props) {
                   </div>
                 )}
                 {out.input && inputActive && (
-                  <div style={{ display: 'flex', gap: 6 }}>
+                  <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
                     <input ref={inputRef} placeholder={out.inputPlaceholder ?? 'Digite aqui...'} style={S.input()}
                       onKeyDown={(e) => {
                         if (e.key === 'Enter') {
@@ -124,6 +124,26 @@ export default function Chat({ onViewSwitch, bot }: Props) {
                           }
                         }
                       }} />
+                    {!isLocationInput && (
+                      <button
+                        type="button"
+                        onClick={() => (isRecording ? stopRecording() : void startRecording())}
+                        title={isRecording ? 'Parar gravação' : 'Enviar áudio'}
+                        style={{
+                          background: isRecording ? 'var(--red)' : 'var(--teal)',
+                          border: 'none',
+                          borderRadius: 10,
+                          padding: '9px 12px',
+                          color: '#fff',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                        }}
+                      >
+                        {isRecording ? <Square size={18} fill="currentColor" /> : <Mic size={18} />}
+                      </button>
+                    )}
                     <button
                       onClick={() => {
                         if (!inputRef.current) return

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { botMessage, getZones } from '@/lib/api'
+import { botMessage, botAudio, getZones } from '@/lib/api'
 import { getAnonymousFingerprint } from '@/lib/fingerprint'
 import { getGPSCoord, reverseGeocode, searchLocation } from '@/lib/location'
 import type { BotOption, BotOutput } from '@/types'
@@ -27,8 +27,12 @@ export function useBot() {
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [inputActive, setInputActive] = useState(false)
   const [isTyping, setIsTyping] = useState(false)
+  const [isRecording, setIsRecording] = useState(false)
   const sessionId = useRef<string>('')
   const zonesCache = useRef<{ id: string; lat: number; lng: number }[] | null>(null)
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null)
+  const streamRef = useRef<MediaStream | null>(null)
+  const chunksRef = useRef<Blob[]>([])
 
   const getZonesCached = useCallback(async () => {
     if (zonesCache.current) return zonesCache.current
@@ -180,6 +184,58 @@ export function useBot() {
     await send({ text })
   }, [addMsg, send])
 
+  const startRecording = useCallback(async () => {
+    if (isRecording || !navigator.mediaDevices?.getUserMedia) return
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      streamRef.current = stream
+      chunksRef.current = []
+      const mime = MediaRecorder.isTypeSupported('audio/webm;codecs=opus') ? 'audio/webm' : 'audio/ogg'
+      const rec = new MediaRecorder(stream)
+      mediaRecorderRef.current = rec
+      rec.ondataavailable = (e) => { if (e.data.size) chunksRef.current.push(e.data) }
+      rec.onstop = async () => {
+        streamRef.current?.getTracks().forEach((t) => t.stop())
+        streamRef.current = null
+        mediaRecorderRef.current = null
+        const blob = new Blob(chunksRef.current, { type: mime })
+        chunksRef.current = []
+        if (blob.size < 100) {
+          setIsRecording(false)
+          addMsg({ from: 'bot', output: { text: '❌ Áudio muito curto. Tente novamente.' } })
+          return
+        }
+        const base64 = await new Promise<string>((resolve, reject) => {
+          const r = new FileReader()
+          r.onloadend = () => resolve(String(r.result ?? ''))
+          r.onerror = reject
+          r.readAsDataURL(blob)
+        })
+        setIsRecording(false)
+        setIsTyping(true)
+        setInputActive(false)
+        addMsg({ from: 'user', text: '🎤 Áudio...' })
+        const res = await botAudio(sessionId.current, base64, mime)
+        setIsTyping(false)
+        if (!res.data) {
+          addMsg({ from: 'bot', output: { text: res.error?.message ?? '❌ Não foi possível transcrever. Tente novamente.' } })
+          return
+        }
+        addMsg({ from: 'bot', output: res.data })
+        if (res.data.input) setInputActive(true)
+      }
+      rec.start(200)
+      setIsRecording(true)
+    } catch {
+      addMsg({ from: 'bot', output: { text: '❌ Não foi possível acessar o microfone. Verifique as permissões.' } })
+    }
+  }, [isRecording, addMsg])
+
+  const stopRecording = useCallback(() => {
+    if (!isRecording || !mediaRecorderRef.current) return
+    mediaRecorderRef.current.stop()
+  }, [isRecording])
+
   const reset = useCallback(async () => {
     setMessages([])
     await send({ optionKey: 'goto:start' })
@@ -189,6 +245,9 @@ export function useBot() {
     messages,
     isTyping,
     inputActive,
+    isRecording,
+    startRecording,
+    stopRecording,
     pickOption,
     sendText,
     handleLocationSearch,

@@ -25,6 +25,13 @@ export const botMessage = (sessionId: string, body: {
   text?: string; optionKey?: string; optionData?: Record<string, unknown>
 }) => req<BotOutput>(P('/bot/message'), { method: 'POST', body: JSON.stringify({ sessionId, ...body }) })
 
+/** Send audio (base64), get bot output (transcription runs on server). */
+export const botAudio = (sessionId: string, audioBase64: string, mimeType?: string) =>
+  req<BotOutput>(P('/bot/audio'), {
+    method: 'POST',
+    body: JSON.stringify({ sessionId, audio: audioBase64, mimeType }),
+  })
+
 // Reports
 export const getActiveReports  = (zone?: string) => req<Report[]>(P('/reports/active', zone ? `?zone=${zone}` : ''))
 export const createReport = (body: {

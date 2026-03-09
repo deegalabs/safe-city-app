@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { BotInputSchema } from './bot'
+import { BotInputSchema, BotAudioInputSchema } from './bot'
 
 describe('schemas/bot', () => {
   describe('BotInputSchema', () => {
@@ -40,6 +40,40 @@ describe('schemas/bot', () => {
     it('accepts sessionId only', () => {
       const result = BotInputSchema.safeParse({ sessionId: 'abcdefghij' })
       expect(result.success).toBe(true)
+    })
+  })
+
+  describe('BotAudioInputSchema', () => {
+    it('accepts sessionId + audio base64', () => {
+      const result = BotAudioInputSchema.safeParse({
+        sessionId: '0123456789ab',
+        audio: 'ZGF0YTphdWRpby93ZWJtO2Jhc2U2NCxZMjl2ZDN',
+      })
+      expect(result.success).toBe(true)
+      if (result.success) {
+        expect(result.data.sessionId).toBe('0123456789ab')
+        expect(result.data.audio).toBeDefined()
+      }
+    })
+
+    it('accepts optional mimeType', () => {
+      const result = BotAudioInputSchema.safeParse({
+        sessionId: '0123456789ab',
+        audio: 'b2dn',
+        mimeType: 'audio/ogg',
+      })
+      expect(result.success).toBe(true)
+      if (result.success) expect(result.data.mimeType).toBe('audio/ogg')
+    })
+
+    it('rejects empty audio', () => {
+      const result = BotAudioInputSchema.safeParse({ sessionId: '0123456789ab', audio: '' })
+      expect(result.success).toBe(false)
+    })
+
+    it('rejects sessionId too short', () => {
+      const result = BotAudioInputSchema.safeParse({ sessionId: '123', audio: 'abc' })
+      expect(result.success).toBe(false)
     })
   })
 })
