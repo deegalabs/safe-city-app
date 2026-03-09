@@ -16,6 +16,7 @@ import { hashFingerprint } from '../lib/fingerprint'
 import { redis } from '../lib/redis'
 import { botService } from './bot'
 import { transcribeAudio } from './ai'
+import { reverseGeocode, getZonesForGeocoding, closestZoneId } from './geocoding'
 import type { BotOutput } from '../types'
 
 /** Listas/botões foram descontinuados pelo WhatsApp (mai/2024). Usamos só texto e opções numeradas. */
@@ -38,6 +39,7 @@ export interface EvolutionWebhookPayload {
       conversation?: string
       extendedTextMessage?: { text?: string }
       buttonsResponseMessage?: { selectedDisplayText?: string; selectedButtonId?: string }
+      locationMessage?: { degreesLatitude?: number; degreesLongitude?: number; latitude?: number; longitude?: number }
     }
     messageType: string
   }
@@ -103,6 +105,18 @@ export async function handleIncoming(payload: EvolutionWebhookPayload): Promise<
     if (!text) {
       await sendText(jid, '❌ Não consegui entender o áudio. Envie em texto ou tente novamente.')
       return
+    }
+  } else if (msgType === 'locationMessage') {
+    const loc = data.message?.locationMessage
+    const lat = loc?.degreesLatitude ?? loc?.latitude
+    const lng = loc?.degreesLongitude ?? loc?.longitude
+    if (lat != null && lng != null) {
+      const resolved = await reverseGeocode(lat, lng)
+      const zones = await getZonesForGeocoding()
+      const zone_id = zones.length ? closestZoneId(resolved?.lat ?? lat, resolved?.lng ?? lng, zones) : 'outro'
+      const local = resolved?.short ?? resolved?.display ?? 'Local enviado'
+      optionKey = 'ACTION:gps'
+      optionData = { local, zone_id }
     }
   }
 

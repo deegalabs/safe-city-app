@@ -4,6 +4,7 @@ import { extractRetratoFromText } from './ai'
 import { moderateNewReport, buildExpiryDate } from './alerts'
 import { notifyZoneSubscribers } from './push'
 import { hashFingerprint } from '../lib/fingerprint'
+import { resolveLocationFromText } from './geocoding'
 import type {
   BotChannel, BotInput, BotOutput, BotOption, BotSession, Retrato,
   ReportTipo, ReportUrgencia,
@@ -291,6 +292,18 @@ export class BotService {
           nextFromInput = 'retrato_revisar'
           delete (session.dados as Record<string, unknown>).from_review
         }
+        // WhatsApp (e outros canais sem frontend): texto em report_local_texto → geocoding → report_local_confirmar
+        if (nextFromInput === 'ACTION:location_search') {
+          const localTexto = (session.dados as Record<string, unknown>).local_texto as string | undefined
+          if (localTexto?.trim()) {
+            const { local, zone_id } = await resolveLocationFromText(localTexto)
+            session = this.mergeData(session, { local, zone_id })
+            session.step = 'report_local_confirmar'
+            session.updatedAt = Date.now()
+            await setSession(key, session)
+            return this.stepToOutput('report_local_confirmar', session)
+          }
+        }
         session.step = nextFromInput
         session.updatedAt = Date.now()
         await setSession(key, session)
@@ -320,6 +333,22 @@ export class BotService {
       }
     }
 
+    // WhatsApp: "Usar minha localização" sem pin → pedir para enviar localização ou descrever
+    if (optKey === 'ACTION:gps' && input.channel === 'whatsapp' && !input.optionData?.local) {
+      session.step = 'report_local_texto'
+      session.updatedAt = Date.now()
+      await setSession(key, session)
+      return {
+        type: 'text',
+        text: '📍 No WhatsApp você pode:\n\n1. Enviar sua **localização** (clipe 📎 → Localização) ou\n2. **Descrever o local** digitando abaixo. Ex: Praça XV, Terminal TICEN, Rua Bocaiúva...',
+        input: true,
+        inputPlaceholder: 'Nome da rua, praça ou referência...',
+        inputKey: 'local_texto',
+        nextOnInput: 'ACTION:location_search',
+        options: [{ label: '🏠 Voltar ao início', key: 'goto:start' }],
+      }
+    }
+
     // Merge option data into session
     if (input.optionData) {
       session = this.mergeData(session, input.optionData)
@@ -346,6 +375,11 @@ export class BotService {
     // Infra tipo skips retrato steps — go directly to infra description
     if (nextStep === 'retrato_inicio' && session.dados.tipo === 'infra') {
       nextStep = 'report_infra_desc'
+    }
+
+    // ACTION:gps com optionData (local já resolvido, ex.: pin no WhatsApp) → ir para confirmar local
+    if (nextStep === 'ACTION:gps' && session.dados.local) {
+      nextStep = 'report_local_confirmar'
     }
 
     session.step = nextStep
