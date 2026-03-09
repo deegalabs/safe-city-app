@@ -15,6 +15,7 @@ vi.mock('../lib/redis', () => ({
 vi.mock('../lib/prisma', () => ({
   prisma: {
     report: { create: vi.fn() },
+    zone: { findFirst: vi.fn() },
   },
 }))
 
@@ -39,12 +40,14 @@ const mockGetSession = vi.mocked(getSession)
 const mockSetSession = vi.mocked(setSession)
 const mockModerate = vi.mocked(moderateNewReport)
 const mockPrismaCreate = vi.mocked(prisma.report.create)
+const mockZoneFindFirst = vi.mocked(prisma.zone.findFirst)
 
 describe('BotService', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockGetSession.mockResolvedValue(null)
     mockModerate.mockResolvedValue({ allowed: true })
+    mockZoneFindFirst.mockResolvedValue({ id: 'zone-1', slug: 'praca-xv', nome: 'Praça XV', lat: -27.5965, lng: -48.5484, risco: 88, reports_total: 0, reports_semana: 0, created_at: new Date(), updated_at: new Date() } as never)
     mockPrismaCreate.mockResolvedValue({
       id: 'r1',
       hash: 'h1',
@@ -177,12 +180,12 @@ describe('BotService', () => {
       })
       expect(mockPrismaCreate).toHaveBeenCalledWith(
         expect.objectContaining({
-          data: expect.objectContaining({ zone_id: 'outro' }),
+          data: expect.objectContaining({ zone_id: 'zone-1' }),
         })
       )
     })
 
-    it('sendReport with zone_id osm-resolved normalizes to outro', async () => {
+    it('sendReport with zone_id osm-resolved falls back to first zone', async () => {
       mockGetSession.mockResolvedValue({
         channel: 'pwa',
         sessionId: '0123456789ab',
@@ -203,7 +206,7 @@ describe('BotService', () => {
       })
       expect(mockPrismaCreate).toHaveBeenCalledWith(
         expect.objectContaining({
-          data: expect.objectContaining({ zone_id: 'outro' }),
+          data: expect.objectContaining({ zone_id: 'zone-1' }),
         })
       )
     })

@@ -28,6 +28,14 @@ export function useBot() {
   const [inputActive, setInputActive] = useState(false)
   const [isTyping, setIsTyping] = useState(false)
   const sessionId = useRef<string>('')
+  const zonesCache = useRef<{ id: string; lat: number; lng: number }[] | null>(null)
+
+  const getZonesCached = useCallback(async () => {
+    if (zonesCache.current) return zonesCache.current
+    const res = await getZones()
+    if (res.data?.length) zonesCache.current = res.data
+    return zonesCache.current ?? []
+  }, [])
 
   useEffect(() => {
     let cancelled = false
@@ -69,6 +77,8 @@ export function useBot() {
       await send({ optionKey: 'goto:report_local_texto' })
       return
     }
+    const zones = await getZonesCached()
+    const zone_id = zones.length ? closestZoneId(coord.lat, coord.lng, zones) : null
     await send({
       optionKey: 'goto:report_local_confirmar',
       optionData: {
@@ -76,24 +86,25 @@ export function useBot() {
         local_display: resolved.display,
         local_lat: resolved.lat,
         local_lng: resolved.lng,
-        zone_id: 'gps-resolved',
+        zone_id,
       },
     })
-  }, [addMsg, send])
+  }, [addMsg, send, getZonesCached])
 
   const handleLocationSearch = useCallback(async (text: string) => {
     addMsg({ from: 'bot', output: { text: '🔍 Buscando...' } })
-    const results = await searchLocation(text)
+    const [results, zones] = await Promise.all([searchLocation(text), getZonesCached()])
     if (results.length === 0) {
       await send({
         optionKey: 'goto:report_local_confirmar',
-        optionData: { local: text.trim(), zone_id: 'manual-text' },
+        optionData: { local: text.trim(), zone_id: null },
       })
       return
     }
     if (results.length === 1) {
       const r = results[0]
       if (r) {
+        const zone_id = zones.length ? closestZoneId(r.lat, r.lng, zones) : null
         await send({
           optionKey: 'goto:report_local_confirmar',
           optionData: {
@@ -101,7 +112,7 @@ export function useBot() {
             local_display: r.display,
             local_lat: r.lat,
             local_lng: r.lng,
-            zone_id: 'osm-resolved',
+            zone_id,
           },
         })
       }
@@ -119,12 +130,12 @@ export function useBot() {
             local_display: r.display,
             local_lat: r.lat,
             local_lng: r.lng,
-            zone_id: 'osm-resolved',
+            zone_id: zones.length ? closestZoneId(r.lat, r.lng, zones) : null,
           },
         })),
       },
     })
-  }, [addMsg, send])
+  }, [addMsg, send, getZonesCached])
 
   const handleSelectLocation = useCallback(async (opt: BotOption) => {
     const data = opt.data
@@ -139,13 +150,11 @@ export function useBot() {
       addMsg({ from: 'bot', output: { text: '❌ Não foi possível obter a localização. Ative o GPS e tente novamente.' } })
       return
     }
-    const resolved = await reverseGeocode(coord)
+    const [resolved, zones] = await Promise.all([reverseGeocode(coord), getZonesCached()])
     const local = resolved?.short ?? resolved?.display ?? 'Emergência'
-    let zone_id = 'outro'
-    const zonesRes = await getZones()
-    if (zonesRes.data?.length) zone_id = closestZoneId(coord.lat, coord.lng, zonesRes.data)
+    const zone_id = zones.length ? closestZoneId(coord.lat, coord.lng, zones) : null
     await send({ optionKey: 'ACTION:sos_submit', optionData: { local, zone_id } })
-  }, [addMsg, send])
+  }, [addMsg, send, getZonesCached])
 
   const pickOption = useCallback(async (opt: BotOption) => {
     addMsg({ from: 'user', text: opt.label })

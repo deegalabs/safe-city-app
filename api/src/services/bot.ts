@@ -377,9 +377,14 @@ export class BotService {
   private async sendReport(session: BotSession, key: string): Promise<BotOutput> {
     try {
       const zoneId = session.dados.zone_id
-      const normalizedZone = (zoneId === 'gps-resolved' || zoneId === 'osm-resolved' || zoneId === 'manual-text' || !zoneId)
-        ? 'outro'
-        : zoneId
+      let normalizedZone: string
+      if (zoneId && !['gps-resolved', 'osm-resolved', 'manual-text', 'outro'].includes(zoneId)) {
+        normalizedZone = zoneId
+      } else {
+        // zone not resolved by frontend: use closest zone by risco or first available
+        const fallback = await prisma.zone.findFirst({ orderBy: { risco: 'desc' } })
+        normalizedZone = fallback?.id ?? zoneId ?? 'outro'
+      }
 
       const mod = await moderateNewReport({
         fingerprint: session.sessionId,
