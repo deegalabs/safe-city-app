@@ -1,16 +1,28 @@
+import crypto from 'node:crypto'
 import type { FastifyInstance } from 'fastify'
 import { handleIncoming, verifyWebhookSecret, type EvolutionWebhookPayload } from '../services/whatsapp'
 import { ok, err } from '../types'
 
+const WEBHOOK_PATH_TOKEN = process.env['WHATSAPP_WEBHOOK_PATH_TOKEN'] ?? ''
+
+function constantTimeEqual(a: string, b: string): boolean {
+  if (a.length !== b.length) return false
+  const bufA = Buffer.from(a, 'utf8')
+  const bufB = Buffer.from(b, 'utf8')
+  if (bufA.length !== bufB.length) return false
+  return crypto.timingSafeEqual(bufA, bufB)
+}
+
 export default async function whatsappRoutes(app: FastifyInstance) {
   /**
-   * POST /api/whatsapp/webhook
-   * Called by Evolution API on every incoming WhatsApp message.
-   * Configure this URL in Evolution API dashboard under "Webhooks".
+   * POST /api/whatsapp/webhook/:token
+   * Webhook da Evolution API. URL não exposta no Swagger.
+   * Configure na Evolution a URL completa com o token (ex.: .../webhook/SEU_TOKEN_LONGO).
+   * Gere o token: node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
    */
-  app.post('/webhook', async (req, reply) => {
-    if (process.env['NODE_ENV'] === 'production' && !process.env['WHATSAPP_WEBHOOK_SECRET']) {
-      return reply.code(500).send(err('CONFIG_ERROR', 'WHATSAPP_WEBHOOK_SECRET not set'))
+  app.post<{ Params: { token: string } }>('/webhook/:token', async (req, reply) => {
+    if (!WEBHOOK_PATH_TOKEN || !constantTimeEqual(req.params.token, WEBHOOK_PATH_TOKEN)) {
+      return reply.code(404).send(err('NOT_FOUND', 'Not found'))
     }
     const secret = req.headers['x-webhook-secret'] as string ?? ''
     if (!verifyWebhookSecret(secret)) {

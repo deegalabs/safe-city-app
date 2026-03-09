@@ -20,4 +20,13 @@ describe('integration / api/whatsapp', () => {
     expect(body.data).toHaveProperty('connected')
     expect(body.data).toHaveProperty('instance')
   })
+
+  it('POST /api/whatsapp/webhook/:token with wrong token returns 404', async () => {
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/whatsapp/webhook/token-invalido-123',
+      payload: { event: 'MESSAGES_UPSERT', data: {} },
+    })
+    expect(res.statusCode).toBe(404)
+  })
 })

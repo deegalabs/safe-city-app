@@ -4,7 +4,7 @@
  * Docs: https://doc.evolution-api.com
  *
  * Flow:
- *   WhatsApp message → webhook POST /api/whatsapp/webhook
+ *   WhatsApp message → webhook POST /api/whatsapp/webhook/:token
  *   → WhatsAppService.handleIncoming()
  *   → BotService.process() (same logic as PWA)
  *   → WhatsAppService.send() → Evolution API → WhatsApp

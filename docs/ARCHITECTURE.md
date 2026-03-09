@@ -49,7 +49,7 @@ Canal PWA:
   useBot() → POST /api/bot/message → BotService → output → render React
 
 Canal WhatsApp:
-  mensagem → Evolution API → webhook POST /api/whatsapp/webhook → BotService → Evolution API → WhatsApp
+  mensagem → Evolution API → webhook POST /api/whatsapp/webhook/:token → BotService → Evolution API → WhatsApp
 ```
 
 O mesmo fluxo, o mesmo retrato falado, a mesma lógica de moderação e envio.

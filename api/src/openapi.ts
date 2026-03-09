@@ -103,9 +103,7 @@ export const openApiSpec = {
     '/api/subscribe': {
       post: { summary: 'Registra push subscription', tags: ['Subscribe'], requestBody: { content: { 'application/json': { schema: { type: 'object' } } } }, responses: { 200: { description: 'OK' } } },
     },
-    '/api/whatsapp/webhook': {
-      post: { summary: 'Webhook Evolution API', tags: ['WhatsApp'], responses: { 200: { description: 'OK' } } },
-    },
+    // POST /api/whatsapp/webhook/:token — intencionalmente não documentado (URL secreta)
     '/api/whatsapp/status': {
       get: { summary: 'Status da instância WhatsApp', tags: ['WhatsApp'], responses: { 200: { description: 'OK' } } },
     },
