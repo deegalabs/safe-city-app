@@ -64,12 +64,15 @@ async function getAudioBase64(messageKey: { id: string }): Promise<{ buffer: Buf
 }
 
 export async function handleIncoming(payload: EvolutionWebhookPayload): Promise<void> {
-  if (payload.data.key.fromMe) return
+  const data = payload?.data
+  const key = data?.key
+  if (!data || !key) return // eventos sem mensagem (ex.: CONNECTION_UPDATE) ou payload malformado
+  if (key.fromMe) return
   const VALID_EVENTS = ['messages.upsert', 'MESSAGES_UPSERT', 'messages.update']
   if (!VALID_EVENTS.includes(payload.event)) return
 
-  const jid     = payload.data.key.remoteJid
-  const msgType = payload.data.messageType
+  const jid     = key.remoteJid
+  const msgType = data.messageType
 
   // Extract text or button response
   let text: string | undefined
@@ -77,15 +80,15 @@ export async function handleIncoming(payload: EvolutionWebhookPayload): Promise<
   let optionData: Record<string, unknown> | undefined
 
   if (msgType === 'conversation') {
-    text = payload.data.message?.conversation?.trim()
+    text = data.message?.conversation?.trim()
   } else if (msgType === 'extendedTextMessage') {
-    text = payload.data.message?.extendedTextMessage?.text?.trim()
+    text = data.message?.extendedTextMessage?.text?.trim()
   } else if (msgType === 'buttonsResponseMessage') {
-    const btn = payload.data.message?.buttonsResponseMessage
+    const btn = data.message?.buttonsResponseMessage
     optionKey  = btn?.selectedButtonId
     text       = btn?.selectedDisplayText
   } else if (msgType === 'audioMessage') {
-    const audio = await getAudioBase64(payload.data.key)
+    const audio = await getAudioBase64(key)
     if (audio) {
       const transcript = await transcribeAudio(audio.buffer, audio.mimeType)
       if (transcript.trim()) text = transcript.trim()
