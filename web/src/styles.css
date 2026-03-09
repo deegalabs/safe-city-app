@@ -48,6 +48,19 @@ html,body,#root{height:100%;background:#000;font-family:var(--sans);color:var(--
 }
 .sos-fab:hover{transform:scale(1.08)}
 .sos-fab:active{transform:scale(0.95)}
+
+/* Reset FAB — novo reporte (só na aba Chat, acima do SOS) */
+.reset-fab{
+  position:absolute;bottom:132px;right:16px;z-index:200;
+  width:52px;height:52px;border-radius:50%;border:none;
+  background:var(--orange);color:#fff;
+  cursor:pointer;display:flex;align-items:center;justify-content:center;
+  box-shadow:0 4px 12px rgba(255,107,53,0.35);
+  transition:transform .1s;-webkit-tap-highlight-color:transparent;
+}
+.reset-fab:hover{transform:scale(1.08)}
+.reset-fab:active{transform:scale(0.95)}
+
 @keyframes sosPulse{
   0%{box-shadow:0 0 0 0 #ef444466}
   60%{box-shadow:0 0 0 10px #ef444400}

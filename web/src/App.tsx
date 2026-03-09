@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react'
-import { MessageSquare, TriangleAlert, Map, BarChart2, Settings } from 'lucide-react'
+import { MessageSquare, TriangleAlert, Map, BarChart2, Settings, RefreshCw } from 'lucide-react'
 import { useAlerts } from '@/hooks/useAlerts'
 import { useBot } from '@/hooks/useBot'
 import Chat from '@/views/Chat'
@@ -108,6 +108,17 @@ export default function App() {
         {view === 'bairro'  && <Bairro  />}
         {view === 'sobre'   && <Sobre   />}
       </main>
+      {view === 'chat' && bot.messages.length > 1 && !sosOpen && (
+        <button
+          type="button"
+          className="reset-fab"
+          onClick={() => void bot.reset()}
+          title="Novo reporte"
+          aria-label="Recomeçar e iniciar novo reporte"
+        >
+          <RefreshCw size={22} strokeWidth={2.5} />
+        </button>
+      )}
       {!sosOpen && (
         <button type="button" className="sos-fab" onClick={() => setSosOpen(true)}>
           SOS
