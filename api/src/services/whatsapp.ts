@@ -29,7 +29,11 @@ export interface EvolutionWebhookPayload {
   instance: string
   data: {
     key: { remoteJid: string; fromMe: boolean; id: string }
-    message?: { conversation?: string; buttonsResponseMessage?: { selectedDisplayText?: string; selectedButtonId?: string } }
+    message?: {
+      conversation?: string
+      extendedTextMessage?: { text?: string }
+      buttonsResponseMessage?: { selectedDisplayText?: string; selectedButtonId?: string }
+    }
     messageType: string
   }
 }
@@ -74,6 +78,8 @@ export async function handleIncoming(payload: EvolutionWebhookPayload): Promise<
 
   if (msgType === 'conversation') {
     text = payload.data.message?.conversation?.trim()
+  } else if (msgType === 'extendedTextMessage') {
+    text = payload.data.message?.extendedTextMessage?.text?.trim()
   } else if (msgType === 'buttonsResponseMessage') {
     const btn = payload.data.message?.buttonsResponseMessage
     optionKey  = btn?.selectedButtonId
