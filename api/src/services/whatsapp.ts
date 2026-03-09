@@ -146,7 +146,10 @@ async function sendButtons(jid: string, text: string, buttons: unknown[]): Promi
   await evolutionFetch('/message/sendButtons/' + EVOLUTION_INST, {
     number: jid,
     options: { delay: 300, presence: 'composing' },
-    buttonMessage: { title: 'Safe City', description: text, footer: 'Centro · Floripa', buttons },
+    title: 'Safe City',
+    description: text,
+    footer: 'Centro · Floripa',
+    buttons,
   })
 }
 
@@ -154,16 +157,14 @@ async function sendList(jid: string, text: string, options: BotOutput['options']
   await evolutionFetch('/message/sendList/' + EVOLUTION_INST, {
     number: jid,
     options: { delay: 300, presence: 'composing' },
-    listMessage: {
-      title: 'Safe City',
-      description: text,
-      footer: 'Centro · Floripa',
-      buttonText: 'Ver opções',
-      sections: [{
-        title: 'Escolha uma opção',
-        rows: (options ?? []).map((o) => ({ title: o.label, rowId: o.key })),
-      }],
-    },
+    title: 'Safe City',
+    description: text,
+    footerText: 'Centro · Floripa',
+    buttonText: 'Ver opções',
+    sections: [{
+      title: 'Escolha uma opção',
+      rows: (options ?? []).map((o) => ({ title: o.label, rowId: o.key })),
+    }],
   })
 }
 
