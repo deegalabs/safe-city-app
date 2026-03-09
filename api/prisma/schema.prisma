@@ -1,0 +1,212 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// ── Zone ─────────────────────────────────────────────────────
+
+model Zone {
+  id             String   @id @default(cuid())
+  slug           String   @unique
+  nome           String
+  lat            Float
+  lng            Float
+  risco          Int      @default(50)
+  reports_total  Int      @default(0)
+  reports_semana Int      @default(0)
+  created_at     DateTime @default(now())
+  updated_at     DateTime @updatedAt
+
+  reports  Report[]
+  partners Partner[]
+
+  @@map("zones")
+}
+
+// ── Report ────────────────────────────────────────────────────
+
+model Report {
+  id           String         @id @default(cuid())
+  hash         String         @unique @default(cuid())
+  tipo         ReportTipo
+  urgencia     ReportUrgencia
+  status       ReportStatus   @default(ativo)
+  local        String
+  zone_id      String
+  retrato      Json?
+  extra        String?
+  confirmacoes Int            @default(0)
+  fingerprint  String
+  channel      BotChannel     @default(pwa)
+  created_at   DateTime       @default(now())
+  expires_at   DateTime
+  updated_at   DateTime       @updatedAt
+
+  zone          Zone           @relation(fields: [zone_id], references: [id])
+  confirmations Confirmation[]
+
+  @@index([zone_id, status])
+  @@index([expires_at])
+  @@map("reports")
+}
+
+// ── Confirmation ──────────────────────────────────────────────
+
+model Confirmation {
+  id          String   @id @default(cuid())
+  report_id   String
+  fingerprint String
+  created_at  DateTime @default(now())
+
+  report Report @relation(fields: [report_id], references: [id])
+
+  @@unique([report_id, fingerprint])
+  @@map("confirmations")
+}
+
+// ── Partner ───────────────────────────────────────────────────
+
+model Partner {
+  id             String        @id @default(cuid())
+  nome           String
+  slug           String        @unique
+  status         PartnerStatus @default(seguro)
+  type           PartnerType   @default(other)
+  lat            Float
+  lng            Float
+  zone_id        String
+  endereco       String?
+  telefone       String?
+  responsavel    String?
+  logo_url       String?
+  qr_code        String?
+  open_time      String?
+  close_time     String?
+  open_days      String[]       @default([])
+  checkins_hoje  Int           @default(0)
+  active         Boolean       @default(true)
+  created_at     DateTime      @default(now())
+  updated_at     DateTime      @updatedAt
+
+  zone     Zone      @relation(fields: [zone_id], references: [id])
+  checkins Checkin[]
+  admins   Admin[]
+
+  @@map("partners")
+}
+
+// ── Checkin ───────────────────────────────────────────────────
+
+model Checkin {
+  id          String   @id @default(cuid())
+  partner_id  String
+  fingerprint String
+  created_at  DateTime @default(now())
+
+  partner Partner @relation(fields: [partner_id], references: [id])
+
+  @@map("checkins")
+}
+
+// ── Push Subscription ─────────────────────────────────────────
+
+model PushSubscription {
+  id         String   @id @default(cuid())
+  endpoint   String   @unique
+  p256dh     String
+  auth       String
+  zones      String[]
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  @@map("push_subscriptions")
+}
+
+// ── Admin ─────────────────────────────────────────────────────
+
+model Admin {
+  id         String    @id @default(cuid())
+  email      String    @unique
+  nome       String
+  role       AdminRole @default(parceiro)
+  partner_id String?
+  active     Boolean   @default(true)
+  last_login DateTime?
+  created_at DateTime  @default(now())
+  updated_at DateTime  @updatedAt
+
+  partner    Partner?     @relation(fields: [partner_id], references: [id])
+  audit_logs AuditLog[]
+
+  @@map("admins")
+}
+
+// ── Audit Log ─────────────────────────────────────────────────
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  admin_id   String
+  action     String
+  entity     String
+  entity_id  String?
+  meta       Json?
+  created_at DateTime @default(now())
+
+  admin Admin @relation(fields: [admin_id], references: [id])
+
+  @@index([admin_id])
+  @@index([created_at])
+  @@map("audit_logs")
+}
+
+// ── Enums ─────────────────────────────────────────────────────
+
+enum ReportTipo {
+  furto
+  violencia
+  assedio
+  suspeito
+  infra
+}
+
+enum ReportUrgencia {
+  alta
+  media
+  baixa
+}
+
+enum ReportStatus {
+  ativo
+  confirmado
+  critico
+  expirado
+  removido
+}
+
+enum PartnerType {
+  bar
+  pharmacy
+  store
+  other
+}
+
+enum PartnerStatus {
+  seguro
+  atencao
+  fechado
+}
+
+enum AdminRole {
+  superadmin
+  parceiro
+}
+
+enum BotChannel {
+  pwa
+  whatsapp
+}

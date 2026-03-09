@@ -1,0 +1,65 @@
+# SHIELD — ambiente local para desenvolvimento
+# Uso: docker compose up -d
+# Redis é obrigatório para a API (sessões do bot).
+# Postgres é opcional: use Supabase em nuvem ou este Postgres local.
+# Evolution API é opcional: canal WhatsApp (ver EVOLUTION_LOCAL.md na raiz do repositório).
+
+services:
+  redis:
+    image: redis:7-alpine
+    container_name: shield-app-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - shield-redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 3
+
+  # Opcional: banco local (em vez de Supabase). Use quando quiser 100% offline.
+  postgres:
+    image: postgres:16-alpine
+    container_name: shield-app-postgres
+    environment:
+      POSTGRES_USER: shield
+      POSTGRES_PASSWORD: shield
+      POSTGRES_DB: shield
+    ports:
+      - "5432:5432"
+    volumes:
+      - shield-pg-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U shield -d shield"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  # Opcional: Evolution API para canal WhatsApp. Porta 8080.
+  # Depende do Postgres (banco "evolution"). Após subir: criar instância, QR, webhook (ver EVOLUTION_LOCAL.md na raiz do repo).
+  evolution-api:
+    image: atendai/evolution-api:latest
+    container_name: shield-app-evolution
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "8080:8080"
+    environment:
+      AUTHENTICATION_API_KEY: ${EVOLUTION_API_KEY:-shield-dev}
+      DATABASE_ENABLED: "true"
+      DATABASE_PROVIDER: postgresql
+      DATABASE_CONNECTION_URI: postgresql://shield:shield@postgres:5432/evolution
+      CACHE_REDIS_ENABLED: "true"
+      CACHE_REDIS_URI: redis://redis:6379
+    volumes:
+      - evolution-instances:/evolution/instances
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: unless-stopped
+
+volumes:
+  shield-redis-data:
+  shield-pg-data:
+  evolution-instances:

@@ -1,0 +1,12 @@
+{
+  "buildCommand": "pnpm run build",
+  "outputDirectory": "dist",
+  "framework": "vite",
+  "headers": [
+    { "source": "/index.html", "headers": [{ "key": "Cache-Control", "value": "no-cache, no-store, must-revalidate" }] }
+  ],
+  "rewrites": [
+    { "source": "/manifest.json", "destination": "/manifest.webmanifest" },
+    { "source": "/(.*)", "destination": "/index.html" }
+  ]
+}
