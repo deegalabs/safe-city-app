@@ -10,7 +10,7 @@ async function req<T>(path: string, options?: RequestInit): Promise<ApiResult<T>
   try {
     const url = path.startsWith('http') ? path : `${BASE}${path}`
     const res = await fetch(url, { headers: { 'Content-Type': 'application/json' }, ...options })
-    const json = await res.json().catch(() => ({ data: null, error: { code: 'INVALID_RESPONSE', message: 'Resposta inválida da API' } }))
+    const json = await res.json().catch(() => ({ data: null, error: { code: 'INVALID_RESPONSE', message: 'Invalid API response' } }))
     if (!res.ok) return { data: null, error: (json as { error?: ApiResult<unknown>['error'] }).error ?? { code: 'HTTP_ERROR', message: `Erro ${res.status}` } }
     return json as ApiResult<T>
   } catch (e) {

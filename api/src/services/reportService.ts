@@ -16,7 +16,7 @@ export async function createReport(input: CreateReportInput): Promise<CreateRepo
     tipo: input.tipo,
   })
   if (!mod.allowed) {
-    return { ok: false, code: mod.reason ?? 'BLOCKED', message: 'Report não permitido agora.' }
+    return { ok: false, code: mod.reason ?? 'BLOCKED', message: 'Report not allowed at this time.' }
   }
 
   const report = await prisma.report.create({

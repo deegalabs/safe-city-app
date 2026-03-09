@@ -1,6 +1,6 @@
 # Ícones PWA
 
-- `icon.svg` — fonte (escudo + "S", tema SHIELD).
+- `icon.svg` — fonte (escudo + "S", tema Safe City).
 - `icon-192.png` e `icon-512.png` — gerados a partir do SVG para o manifest PWA.
 
 Para regenerar os PNGs:

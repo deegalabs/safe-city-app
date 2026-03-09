@@ -10,7 +10,7 @@ export default async function whatsappRoutes(app: FastifyInstance) {
    */
   app.post('/webhook', async (req, reply) => {
     if (process.env['NODE_ENV'] === 'production' && !process.env['WHATSAPP_WEBHOOK_SECRET']) {
-      return reply.code(500).send(err('CONFIG_ERROR', 'WHATSAPP_WEBHOOK_SECRET não configurado'))
+      return reply.code(500).send(err('CONFIG_ERROR', 'WHATSAPP_WEBHOOK_SECRET not set'))
     }
     const secret = req.headers['x-webhook-secret'] as string ?? ''
     if (!verifyWebhookSecret(secret)) {

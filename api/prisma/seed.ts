@@ -28,9 +28,9 @@ async function main() {
 
   // Seed superadmin
   await prisma.admin.upsert({
-    where: { email: 'admin@safecity.com.br' },
+    where: { email: 'hi@safecity.dev' },
     update: {},
-    create: { email: 'admin@safecity.com.br', nome: 'Admin Safe City', role: 'superadmin' },
+    create: { email: 'hi@safecity.dev', nome: 'Admin Safe City', role: 'superadmin' },
   })
 
   // Seed sample reports

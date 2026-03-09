@@ -16,7 +16,7 @@ export interface RequestWithAdmin extends FastifyRequest {
 }
 
 export async function requireAdmin(req: FastifyRequest): Promise<void> {
-  if (!supabase) throw { statusCode: 503, message: 'Supabase não configurado. Defina SUPABASE_URL e SUPABASE_SERVICE_ROLE_KEY no .env' }
+  if (!supabase) throw { statusCode: 503, message: 'Supabase not configured. Set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in .env' }
   const token = req.headers.authorization?.replace('Bearer ', '')
   if (!token) throw { statusCode: 401, message: 'Token required' }
 

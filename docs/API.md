@@ -56,4 +56,4 @@ Body: `{ sessionId, text?, optionKey?, optionData? }`
 ## Testes
 
 - **O quê testar:** **TESTS_API.md** (raiz do repositório logos-circle).
-- **Como rodar e convenções:** **TESTING.md** (nesta pasta docs). Comando rápido: `cd shield-app/api && pnpm test`.
+- **Como rodar e convenções:** **TESTING.md** (nesta pasta docs). Comando rápido: `cd safe-city-app/api && pnpm test`.

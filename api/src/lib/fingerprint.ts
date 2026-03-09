@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto'
 import { redis } from './redis'
 
-const SALT = process.env['FINGERPRINT_SALT'] ?? 'shield-default-salt-change-in-prod'
+const SALT = process.env['FINGERPRINT_SALT'] ?? 'safe-city-default-salt-change-in-prod'
 
 export function hashFingerprint(fp: string): string {
   return createHash('sha256').update(`${SALT}:${fp}`).digest('hex')

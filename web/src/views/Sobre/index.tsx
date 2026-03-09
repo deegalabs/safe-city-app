@@ -66,7 +66,7 @@ export default function Sobre() {
         <section style={{ background:'var(--bg2)', border:'1px solid var(--border)', borderRadius:10, padding:'14px 16px', marginBottom:10 }}>
           <div className="section-label">PONTOS SEGUROS</div>
           <div style={{ fontSize:12, color:'var(--dim)', lineHeight:1.6, marginBottom:12 }}>Estabelecimentos que exibem QR Code Safe City na entrada. Aparecem no mapa e recebem alertas próximos.</div>
-          <a href="mailto:contato@centroseguro.com.br" style={{ display:'block', textAlign:'center', padding:11, borderRadius:10, background:'var(--bg1)', border:'1px solid var(--border)', color:'var(--orange)', fontWeight:600, fontSize:13, textDecoration:'none' }}>
+          <a href="mailto:hi@safecity.dev" style={{ display:'block', textAlign:'center', padding:11, borderRadius:10, background:'var(--bg1)', border:'1px solid var(--border)', color:'var(--orange)', fontWeight:600, fontSize:13, textDecoration:'none' }}>
             📍 Quero ser ponto seguro parceiro
           </a>
         </section>
