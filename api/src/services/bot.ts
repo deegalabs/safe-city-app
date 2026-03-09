@@ -198,8 +198,12 @@ function buildFlow(): Record<string, FlowStep> {
       input: true,
       inputPlaceholder: 'O que mais você observou...',
       inputKey: 'extra',
-      nextOnInput: 'ACTION:send',
-      options: [{ label: '✅ Enviar alerta agora', key: 'ACTION:send' }],
+      nextOnInput: 'retrato_revisar',
+      options: [{ label: '✅ Revisar e enviar', key: 'goto:retrato_revisar' }],
+    },
+    retrato_revisar: {
+      text: '', // built dynamically in stepToOutput
+      options: [], // built dynamically
     },
     como: {
       text: '🛡 Safe City é um sistema de alertas comunitários.\n\n✓ Você reporta de forma anônima\n✓ A comunidade recebe o alerta em segundos\n✓ Nenhuma foto de pessoa é armazenada\n✓ Alertas somem automaticamente em 45min\n✓ Sem login, sem rastreamento pessoal',
@@ -291,7 +295,7 @@ export class BotService {
     }
 
     // Get next step
-    const nextStep = optKey.replace('goto:', '')
+    let nextStep = optKey.replace('goto:', '')
 
     // Handle send after input field
     const currentFlow = this.flow[session.step]
@@ -299,6 +303,13 @@ export class BotService {
       if (currentFlow.inputKey) {
         session = this.mergeData(session, { [currentFlow.inputKey]: input.text })
       }
+    }
+
+    // From "Alterar detalhe": after editing a retrato_* step, return to revisar
+    const fromReview = (session.dados as Record<string, unknown>).from_review
+    if (fromReview && nextStep.startsWith('retrato_') && nextStep !== 'retrato_revisar') {
+      nextStep = 'retrato_revisar'
+      delete (session.dados as Record<string, unknown>).from_review
     }
 
     session.step = nextStep
@@ -386,6 +397,11 @@ export class BotService {
   }
 
   private stepToOutput(step: string, session?: BotSession): BotOutput {
+    if (step === 'retrato_revisar' && session) {
+      const text = this.buildRetratoSummaryForReview(session)
+      const options = this.buildRevisarOptions(session)
+      return { type: 'text', text, options }
+    }
     const flowStep = this.flow[step]
     if (!flowStep) return { text: '❓ Não entendi. Tente novamente.', options: [{ label: '🏠 Início', key: 'goto:start' }] }
     let text = flowStep.text
@@ -400,6 +416,53 @@ export class BotService {
       inputPlaceholder: flowStep.inputPlaceholder,
       inputMode: flowStep.inputMode,
     }
+  }
+
+  private buildRetratoSummaryForReview(session: BotSession): string {
+    const r = session.dados.retrato ?? {}
+    const lines: string[] = []
+    const labels: Record<string, string> = {
+      genero: 'Gênero', idade: 'Idade', altura: 'Altura', porte: 'Porte',
+      pele: 'Pele', cabelo: 'Cabelo', bone_cor: 'Cor do boné',
+      roupa: 'Roupa', cor_roupa: 'Cor da roupa', detalhe: 'Detalhe',
+      fuga: 'Fuga', direcao: 'Direção',
+    }
+    const order: (keyof Retrato)[] = ['genero', 'idade', 'altura', 'porte', 'pele', 'cabelo', 'bone_cor', 'roupa', 'cor_roupa', 'detalhe', 'fuga', 'direcao']
+    for (const k of order) {
+      const v = (r as Record<string, unknown>)[k]
+      if (v != null && String(v).trim() !== '') {
+        lines.push(`${labels[k] ?? k}: ${v}`)
+      }
+    }
+    if (session.dados.extra?.trim()) {
+      lines.push(`Outro: ${session.dados.extra}`)
+    }
+    const block = lines.length ? lines.join('\n') : 'Nenhum detalhe preenchido.'
+    return `📋 Confira o retrato falado antes de enviar:\n\n${block}\n\nEstá correto? Você pode alterar um item ou confirmar.`
+  }
+
+  private buildRevisarOptions(session: BotSession): BotOption[] {
+    const opts: BotOption[] = [{ label: '✅ Confirmar e enviar', key: 'ACTION:send' }]
+    const r = session.dados.retrato ?? {}
+    const stepByField: Record<string, string> = {
+      genero: 'retrato_genero', idade: 'retrato_idade', altura: 'retrato_altura', porte: 'retrato_porte',
+      pele: 'retrato_pele', cabelo: 'retrato_cabelo', bone_cor: 'retrato_bone_cor',
+      roupa: 'retrato_roupa', cor_roupa: 'retrato_cor_roupa', detalhe: 'retrato_detalhe',
+      fuga: 'retrato_fuga', direcao: 'retrato_direcao',
+    }
+    const labels: Record<string, string> = {
+      genero: 'Gênero', idade: 'Idade', altura: 'Altura', porte: 'Porte',
+      pele: 'Pele', cabelo: 'Cabelo', bone_cor: 'Cor do boné',
+      roupa: 'Roupa', cor_roupa: 'Cor da roupa', detalhe: 'Detalhe',
+      fuga: 'Fuga', direcao: 'Direção',
+    }
+    for (const [field, step] of Object.entries(stepByField)) {
+      const v = (r as Record<string, unknown>)[field]
+      if (v != null && String(v).trim() !== '') {
+        opts.push({ label: `✏️ Alterar ${labels[field] ?? field}`, key: `goto:${step}`, data: { from_review: true } })
+      }
+    }
+    return opts
   }
 
   private mergeData(session: BotSession, data: Record<string, unknown>): BotSession {
@@ -422,6 +485,7 @@ export class BotService {
       else if (k === 'zone_id') next.dados.zone_id = v as string
       else if (k === 'urgencia') next.dados.urgencia = v as ReportUrgencia
       else if (k === 'extra') next.dados.extra = v as string
+      else if (k === 'from_review') (next.dados as Record<string, unknown>).from_review = v
     }
     return next
   }
