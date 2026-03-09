@@ -73,6 +73,8 @@ export async function handleIncoming(payload: EvolutionWebhookPayload): Promise<
   const key = data?.key
   if (!data || !key) return // eventos sem mensagem (ex.: CONNECTION_UPDATE) ou payload malformado
   if (key.fromMe) return
+  // Ignorar grupos (@g.us) e broadcasts — só responder em chats individuais (@s.whatsapp.net)
+  if (!key.remoteJid?.endsWith('@s.whatsapp.net')) return
   const VALID_EVENTS = ['messages.upsert', 'MESSAGES_UPSERT', 'messages.update']
   if (!VALID_EVENTS.includes(payload.event)) return
 
