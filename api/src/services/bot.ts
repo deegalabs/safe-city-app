@@ -303,6 +303,17 @@ export class BotService {
             await setSession(key, session)
             return this.stepToOutput('report_local_confirmar', session)
           }
+          // Texto vazio ou só espaços: permanecer em report_local_texto com dica
+          session.step = 'report_local_texto'
+          session.updatedAt = Date.now()
+          await setSession(key, session)
+          return {
+            type: 'text',
+            text: 'Por favor, digite o nome do local (ex: Praça XV, Terminal TICEN, Rua Bocaiúva).',
+            options: this.flow['report_local_texto']!.options,
+            input: true,
+            inputPlaceholder: 'Nome da rua, praça ou referência...',
+          }
         }
         session.step = nextFromInput
         session.updatedAt = Date.now()
@@ -560,6 +571,7 @@ export class BotService {
       else if (k === 'zone_id') next.dados.zone_id = v as string
       else if (k === 'urgencia') next.dados.urgencia = v as ReportUrgencia
       else if (k === 'extra') next.dados.extra = v as string
+      else if (k === 'local_texto') next.dados.local_texto = v as string
       else if (k === 'from_review') (next.dados as Record<string, unknown>).from_review = v
     }
     return next

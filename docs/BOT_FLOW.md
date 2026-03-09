@@ -45,9 +45,10 @@ A sessão é persistida no **Redis** por `channel + sessionId` com TTL 30 min.
 
 ## Ações especiais
 
-- **ACTION:gps** — usa localização do dispositivo; o frontend envia `optionData` com `local`, `zone_id` (ex.: gps-resolved) e o backend faz merge na sessão e vai para report_local_confirmar.
+- **ACTION:gps** — PWA: frontend envia `optionData` com `local`, `zone_id`; backend faz merge e vai para report_local_confirmar. WhatsApp: se não houver optionData (usuário só escolheu a opção), backend redireciona para report_local_texto pedindo pin ou descrição; se chegar pin (locationMessage), whatsapp.ts faz reverse geocode e envia optionData → report_local_confirmar.
+- **ACTION:location_search** — Usado quando o usuário digita texto em report_local_texto (canais sem frontend, ex.: WhatsApp). Backend chama geocoding (Nominatim), faz merge de local e zone_id e vai para report_local_confirmar. O campo **local_texto** é persistido via mergeData.
 - **nav:alertas** / **nav:mapa** — o frontend interpreta e navega para a aba Alertas ou Mapa (não muda step no backend).
-- **ACTION:send** — o backend persiste o report (Prisma), dispara push para assinantes da zona, limpa a sessão e retorna mensagem de confirmação com hash anônimo. Zone_id gps-resolved/osm-resolved é normalizado para `outro`.
+- **ACTION:send** — o backend persiste o report (Prisma), dispara push para assinantes da zona, limpa a sessão e retorna mensagem de confirmação com hash anônimo. Zone_id gps-resolved/osm-resolved/manual-text é normalizado no sendReport.
 
 ---
 
@@ -59,7 +60,7 @@ Se o usuário **digitar texto** em um step do tipo `retrato_*` e o texto tiver m
 
 ## Canais
 
-- **PWA:** `sessionId` = fingerprint do browser (hasheado).  
-- **WhatsApp:** `sessionId` = número do usuário hasheado.  
+- **PWA:** `sessionId` = fingerprint do browser (hasheado). Localização: GPS no frontend + Nominatim; o backend só recebe resultado em optionData.
+- **WhatsApp:** `sessionId` = número do usuário hasheado. Localização: pin (locationMessage) tratado em whatsapp.ts com reverse geocode, ou texto livre em report_local_texto com geocoding no backend (resolveLocationFromText). Respostas em texto com menu numerado (1, 2, 3…); opções guardadas no Redis para mapear número → optionKey.
 
-O fluxo e os steps são idênticos; só muda o canal e o formato da resposta (Quick Replies no WhatsApp, botões no PWA).
+Revisão detalhada do fluxo localização → envio: ver **BOT_FLOW_REVISAO.md**.
