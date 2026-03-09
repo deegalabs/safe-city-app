@@ -31,12 +31,19 @@ export default async function whatsappRoutes(app: FastifyInstance) {
     const key  = process.env['EVOLUTION_API_KEY'] ?? ''
     const inst = process.env['EVOLUTION_INSTANCE'] ?? 'safe-city-floripa'
     try {
-      const res = await fetch(`${url}/instance/fetchInstances`, {
+      const res = await fetch(`${url}/instance/fetchInstances?instanceName=${encodeURIComponent(inst)}`, {
         headers: { apikey: key },
       })
-      const data = await res.json() as unknown[]
-      const instance = Array.isArray(data) ? data.find((i: unknown) => (i as { instance?: { instanceName?: string } }).instance?.instanceName === inst) : null
-      return reply.send(ok({ connected: !!instance, instance: inst }))
+      const body = await res.json() as { response?: unknown[] | Record<string, unknown>; status?: number } | unknown[]
+      const raw = Array.isArray(body) ? body : (body as { response?: unknown[] | Record<string, unknown> }).response
+      const list = Array.isArray(raw) ? raw : raw != null && typeof raw === 'object' ? [raw] : []
+      const instance = list.find((i: unknown) => {
+        const name = (i as { instance?: { instanceName?: string }; instanceName?: string }).instance?.instanceName ?? (i as { instanceName?: string }).instanceName
+        return name === inst
+      }) as { instance?: { status?: string }; status?: string } | undefined
+      const status = instance?.instance?.status ?? instance?.status
+      const connected = !!instance && (status === 'open' || status === 'CONNECTED')
+      return reply.send(ok({ connected, instance: inst, state: status ?? null }))
     } catch {
       return reply.send(ok({ connected: false, instance: inst, error: 'Evolution API unreachable' }))
     }
