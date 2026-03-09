@@ -1,0 +1,14 @@
+# Railway/Nixpacks: usar pnpm em vez de npm (build mais rápido, evita timeout)
+# Coloque este arquivo na mesma pasta que o Railway usa como Root Directory (ex.: api/)
+
+[phases.setup]
+nixPkgs = ["nodejs_20", "pnpm"]
+
+[phases.install]
+cmds = ["pnpm install"]
+
+[phases.build]
+cmds = ["pnpm run build"]
+
+[start]
+cmd = "pnpm run start"

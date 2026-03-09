@@ -1,8 +1,8 @@
 import { config } from 'dotenv'
 import * as path from 'node:path'
 
-// Load .env from monorepo root (safe-city-app/.env) when running from api/
-config({ path: path.resolve(process.cwd(), '../.env') })
+// Load .env da pasta api/
+config({ path: path.resolve(process.cwd(), '.env') })
 
 import Fastify from 'fastify'
 import cors from '@fastify/cors'
