@@ -6,9 +6,9 @@ const URG_COLOR:  Record<string,string> = { alta:'#ef4444', media:'#f59e0b', bai
 
 function minsAgo(iso: string) { return Math.floor((Date.now() - new Date(iso).getTime()) / 60000) }
 
-interface Props { alerts: Report[]; onReport: () => void }
+interface Props { alerts: Report[] }
 
-export default function Alertas({ alerts, onReport }: Props) {
+export default function Alertas({ alerts }: Props) {
   return (
     <div style={{ display:'flex', flexDirection:'column', height:'100%', overflow:'hidden' }}>
       <div style={{ padding:'14px 20px 8px', display:'flex', alignItems:'center', justifyContent:'space-between', flexShrink:0 }}>
@@ -63,12 +63,6 @@ export default function Alertas({ alerts, onReport }: Props) {
             )
           })}
         </div>
-      </div>
-
-      <div style={{ padding:'12px 16px', flexShrink:0 }}>
-        <button onClick={onReport} style={{ width:'100%', padding:14, borderRadius:12, background:'linear-gradient(135deg,var(--orange),var(--red))', border:'none', cursor:'pointer', color:'#fff', fontWeight:700, fontSize:15 }}>
-          ⚠️ &nbsp;Reportar ocorrência
-        </button>
       </div>
     </div>
   )

@@ -91,20 +91,18 @@ export default function App() {
       </header>
       <main className="content">
         {view === 'chat'    && <Chat    onViewSwitch={setView} bot={bot} />}
-        {view === 'alertas' && <Alertas alerts={alerts} onReport={() => setView('chat')} />}
+        {view === 'alertas' && <Alertas alerts={alerts} />}
         {view === 'mapa'    && <Mapa    alerts={alerts} />}
         {view === 'bairro'  && <Bairro  />}
         {view === 'sobre'   && <Sobre   />}
       </main>
-      {view !== 'alertas' && (
-        <button
-          type="button"
-          className="sos-fab"
-          onClick={() => setSosOpen(true)}
-        >
-          SOS
-        </button>
-      )}
+      <button
+        type="button"
+        className="sos-fab"
+        onClick={() => setSosOpen(true)}
+      >
+        SOS
+      </button>
       {sosOpen && (
         <div style={{ position: 'fixed', inset: 0, zIndex: 300, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.6)' }} onClick={() => !sosSending && setSosOpen(false)}>
           <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 16, padding: 24, maxWidth: 320, width: '90%', textAlign: 'center' }} onClick={(e) => e.stopPropagation()}>
