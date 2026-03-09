@@ -99,13 +99,8 @@ export default function App() {
       {view !== 'alertas' && (
         <button
           type="button"
+          className="sos-fab"
           onClick={() => setSosOpen(true)}
-          style={{
-            position: 'fixed', bottom: 70, right: 16, zIndex: 200,
-            width: 56, height: 56, borderRadius: '50%', border: 'none',
-            background: 'linear-gradient(135deg,#ef4444,#dc2626)', color: '#fff',
-            fontSize: 12, fontWeight: 700, cursor: 'pointer', boxShadow: '0 4px 12px rgba(239,68,68,0.4)',
-          }}
         >
           SOS
         </button>
