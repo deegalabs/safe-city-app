@@ -125,7 +125,14 @@ export async function handleIncoming(payload: EvolutionWebhookPayload): Promise<
   const sessionId = hashFingerprint(jid)
   // Resolver "1", "2" etc. para optionKey quando temos opções guardadas (menu em texto)
   const optsKey = WA_OPTS_PREFIX + sessionId
-  const storedOpts = await redis.get(optsKey)
+  let storedOpts: string | null = null
+  try {
+    storedOpts = await redis.get(optsKey)
+  } catch (e) {
+    console.error('WhatsApp redis.get(opts) failed:', (e as Error)?.message)
+    await sendText(jid, '⚠️ Serviço temporariamente indisponível. Tente novamente em instantes.')
+    return
+  }
   if (storedOpts && text && /^\s*\d+\s*$/.test(text)) {
     try {
       const keys = JSON.parse(storedOpts) as string[]
@@ -138,15 +145,26 @@ export async function handleIncoming(payload: EvolutionWebhookPayload): Promise<
     } catch { /* ignore */ }
   }
 
-  const output = await botService.process({
-    channel: 'whatsapp',
-    sessionId,
-    text,
-    optionKey,
-    optionData,
-  })
+  let output
+  try {
+    output = await botService.process({
+      channel: 'whatsapp',
+      sessionId,
+      text,
+      optionKey,
+      optionData,
+    })
+  } catch (e) {
+    console.error('WhatsApp botService.process failed:', (e as Error)?.message)
+    await sendText(jid, '⚠️ Ocorreu um erro ao processar. Tente novamente em instantes.')
+    return
+  }
 
-  await sendOutput(jid, output)
+  try {
+    await sendOutput(jid, output)
+  } catch (e) {
+    console.error('WhatsApp sendOutput/sendText failed:', (e as Error)?.message)
+  }
 }
 
 // ── Outgoing ──────────────────────────────────────────────────

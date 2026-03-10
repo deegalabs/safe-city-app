@@ -30,7 +30,11 @@ export default async function whatsappRoutes(app: FastifyInstance) {
     }
 
     const payload = req.body as EvolutionWebhookPayload
-    void handleIncoming(payload) // fire and forget — respond immediately
+    // Fire-and-forget: respond 200 rápido; processar em background (evita timeout na Evolution).
+    // Qualquer erro em handleIncoming deve aparecer nos logs para diagnóstico.
+    handleIncoming(payload).catch((err) => {
+      req.log.error({ err, event: payload?.event, instance: payload?.instance }, 'WhatsApp webhook handleIncoming failed')
+    })
     return reply.send(ok({ received: true }))
   })
 
