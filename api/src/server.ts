@@ -4,7 +4,7 @@ import * as path from 'node:path'
 // Load .env da pasta api/
 config({ path: path.resolve(process.cwd(), '.env') })
 
-import Fastify from 'fastify'
+import Fastify, { type FastifyRequest } from 'fastify'
 import cors from '@fastify/cors'
 import helmet from '@fastify/helmet'
 import rateLimit from '@fastify/rate-limit'
@@ -34,7 +34,7 @@ async function main() {
     timeWindow: '1 minute',
     errorResponseBuilder: () => ({ data: null, error: { code: 'RATE_LIMIT', message: 'Muitas requisições.' } }),
     // Webhook da Evolution não conta: uma ação do usuário gera vários eventos (MESSAGES_UPSERT, etc.)
-    skip: (req) => req.url?.startsWith('/api/whatsapp/webhook/') === true,
+    allowList: (req: FastifyRequest) => req.url?.startsWith('/api/whatsapp/webhook/') === true,
   })
 
   await app.register(swagger, { openapi: openApiSpec as object })

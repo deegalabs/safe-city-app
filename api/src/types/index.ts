@@ -56,6 +56,8 @@ export interface BotOutput {
   options?: BotOption[]
   input?: boolean
   inputPlaceholder?: string
+  inputKey?: string
+  nextOnInput?: string
   inputMode?: 'location' | 'text'
   type?: 'text' | 'confirm' | 'navigate'
   navigateTo?: string
